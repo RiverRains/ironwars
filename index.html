@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ЖЕЛЕЗНЫЕ ВОЙНЫ 🏋️</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --yellow:#FFD600;--orange:#FF6B00;--red:#FF2200;
@@ -22,6 +23,12 @@
   .header-inner{display:flex;align-items:center;justify-content:space-between;}
   .logo{font-family:'Bebas Neue',sans-serif;font-size:3rem;letter-spacing:4px;background:linear-gradient(135deg,var(--yellow),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
   .logo span{display:block;font-size:.7rem;font-family:'Barlow Condensed',sans-serif;letter-spacing:6px;color:var(--muted);-webkit-text-fill-color:var(--muted);}
+  .sync-indicator{display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:.75rem;color:var(--muted);letter-spacing:1px;}
+  .sync-dot{width:8px;height:8px;border-radius:50%;background:#555;transition:all .4s;flex-shrink:0;}
+  .sync-dot.connected{background:#4CAF50;box-shadow:0 0 6px #4CAF5088;}
+  .sync-dot.syncing{background:var(--yellow);animation:pulse .8s infinite;}
+  .sync-dot.error{background:var(--red);}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
   .insult-banner{background:linear-gradient(90deg,transparent,rgba(255,107,0,.15),transparent);border:1px solid rgba(255,107,0,.3);padding:10px 20px;border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-size:.9rem;color:var(--orange);max-width:420px;text-align:center;font-style:italic;cursor:pointer;transition:all .3s;}
   .insult-banner:hover{border-color:var(--orange);background:rgba(255,107,0,.2);}
   .nav-tabs{display:flex;gap:4px;padding:16px 0 0;border-bottom:1px solid #222;}
@@ -334,7 +341,10 @@
   <div class="container">
     <div class="header-inner">
       <div class="logo">ЖЕЛЕЗНЫЕ ВОЙНЫ<span>СЛОВА БОЛЬНО, НО ДЕНЬ НОГ — ЕЩЁ БОЛЬНЕЕ</span></div>
-      <div class="insult-banner" id="insultBanner" onclick="newInsult()" title="Нажми для новой порции правды">Загружаем оскорбление дня...</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+        <div class="sync-indicator"><div class="sync-dot" id="syncDot"></div><span id="syncLabel">Подключение...</span></div>
+        <div class="insult-banner" id="insultBanner" onclick="newInsult()" title="Нажми для новой порции правды">Загружаем оскорбление дня...</div>
+      </div>
     </div>
     <div class="nav-tabs">
       <button class="tab-btn active" onclick="switchTab('dashboard')">🏠 Главная</button>
@@ -684,28 +694,136 @@ const BADGES=[
 ];
 
 // ============================================================
+// SUPABASE CONFIG
+// ============================================================
+const SUPABASE_URL = 'https://lsvupypqrltwufmezogk.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzdnVweXBxcmx0d3VmbWV6b2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTcyMTAsImV4cCI6MjA4OTA3MzIxMH0.z2lCPTwU3Mr9j9Cdy6EWdBzpnnSL77atFjmpJlYxhVo';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ============================================================
 // STATE
 // ============================================================
-let state = loadState();
+let state = buildEmptyState();
 let currentUser = 1;
 let currentCategory = 'chest';
-// sessionData holds current in-progress sets: { exId: [{weight, reps}, ...] }
 let sessionData = {};
 
-function loadState(){
-  try{ const s=localStorage.getItem('ironwars_v5'); if(s) return JSON.parse(s); }catch(e){}
+function buildEmptyState(){
   return { sessions:[], prs:{1:{},2:{}}, streak:{1:0,2:0}, longestStreak:{1:0,2:0}, lastTrainDate:{1:null,2:null}, badges:{1:[],2:[]}, totalPRs:{1:0,2:0} };
 }
-function saveState(){ localStorage.setItem('ironwars_v5', JSON.stringify(state)); }
+
+// Build derived state (prs, streaks etc.) from raw sessions array
+function rebuildDerived(sessions){
+  const s = buildEmptyState();
+  s.sessions = sessions;
+  // Recompute PRs
+  sessions.forEach(sess=>{
+    const uid = sess.userId;
+    Object.entries(sess.exercises||{}).forEach(([exId,sets])=>{
+      const setsArr = Array.isArray(sets)?sets:[sets];
+      const maxW = Math.max(...setsArr.map(x=>x.weight||0));
+      if(maxW > (s.prs[uid][exId]||0)) s.prs[uid][exId] = maxW;
+    });
+    // totalPRs not stored separately — badges recompute anyway
+  });
+  // Streaks
+  [1,2].forEach(uid=>{
+    s.streak[uid] = computeCurrentStreakFromSessions(sessions, uid);
+    // longestStreak: compute max run
+    const days = [...new Set(sessions.filter(x=>x.userId===uid).map(x=>new Date(x.date).toDateString()))].map(d=>new Date(d)).sort((a,b)=>a-b);
+    let best=0, run=0, prev=null;
+    days.forEach(d=>{ const dd=new Date(d); dd.setHours(0,0,0,0); if(prev&&Math.round((dd-prev)/86400000)===1){run++;}else{run=1;} if(run>best)best=run; prev=dd; });
+    s.longestStreak[uid] = best;
+    // lastTrainDate
+    const userDays = sessions.filter(x=>x.userId===uid).map(x=>new Date(x.date)).sort((a,b)=>b-a);
+    s.lastTrainDate[uid] = userDays.length ? userDays[0].toDateString() : null;
+  });
+  return s;
+}
+
+function computeCurrentStreakFromSessions(sessions, uid){
+  const days=[...new Set(sessions.filter(s=>s.userId===uid).map(s=>new Date(s.date).toDateString()))].map(d=>new Date(d)).sort((a,b)=>b-a);
+  if(!days.length) return 0;
+  let streak=0, cur=new Date(); cur.setHours(0,0,0,0);
+  for(const d of days){ const sd=new Date(d); sd.setHours(0,0,0,0); if(Math.round((cur-sd)/86400000)<=1){streak++;cur=sd;}else break; }
+  return streak;
+}
+
+function setSyncStatus(status, label){
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  if(!dot||!lbl) return;
+  dot.className = 'sync-dot ' + status;
+  lbl.textContent = label;
+}
 
 // ============================================================
-// INIT
+// INIT — load from Supabase, then subscribe to real-time
 // ============================================================
-window.addEventListener('load', ()=>{
-  newInsult(); renderWeekLabel(); renderExcuse(); renderDashboard();
-  renderHeatmap(); renderLeaderboard(); renderStats(); renderHOF();
+window.addEventListener('load', async ()=>{
+  newInsult(); renderWeekLabel();
   renderCategoryFilters(); renderExercises();
+
+  setSyncStatus('syncing','Загрузка...');
+
+  // Load all sessions from Supabase
+  try {
+    const { data, error } = await sb.from('sessions').select('*').order('date', {ascending:true});
+    if(error) throw error;
+    const sessions = (data||[]).map(dbRowToSession);
+    state = rebuildDerived(sessions);
+    setSyncStatus('connected','Синхронизировано');
+  } catch(err) {
+    console.error('Supabase load error:', err);
+    setSyncStatus('error','Ошибка соединения');
+  }
+
+  renderExcuse(); renderDashboard(); renderHeatmap();
+  renderLeaderboard(); renderStats(); renderHOF();
+
+  // Subscribe to real-time changes
+  sb.channel('sessions-changes')
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'sessions' }, payload=>{
+      const sess = dbRowToSession(payload.new);
+      // Avoid duplicate if we just inserted it ourselves
+      if(!state.sessions.find(s=>s._dbId===sess._dbId)){
+        state.sessions.push(sess);
+        state = rebuildDerived(state.sessions);
+        setSyncStatus('connected','Синхронизировано');
+        refreshAll();
+        const user = USERS[sess.userId];
+        showToast(`🔄 ${user.name} записал тренировку!`);
+      }
+    })
+    .on('postgres_changes', { event:'DELETE', schema:'public', table:'sessions' }, payload=>{
+      state.sessions = state.sessions.filter(s=>s._dbId!==payload.old.id);
+      state = rebuildDerived(state.sessions);
+      setSyncStatus('connected','Синхронизировано');
+      refreshAll();
+    })
+    .subscribe(status=>{
+      if(status==='SUBSCRIBED') setSyncStatus('connected','В сети 🟢');
+      if(status==='CLOSED'||status==='CHANNEL_ERROR') setSyncStatus('error','Нет связи');
+    });
 });
+
+function dbRowToSession(row){
+  return {
+    _dbId: row.id,
+    userId: row.user_id,
+    date: row.date,
+    exercises: row.exercises||{},
+    points: row.points||0,
+    tonnage: row.tonnage||0,
+  };
+}
+
+function refreshAll(){
+  renderWeekLabel(); renderExcuse(); renderDashboard(); renderHeatmap();
+  renderLeaderboard(); renderStats(); renderHOF();
+}
+
+
 
 // ============================================================
 // WEEK HELPERS
@@ -717,13 +835,7 @@ function getUserWeekPoints(uid){ return getCurrentWeekSessions().filter(s=>s.use
 function getUserWeekSessions(uid){ return getCurrentWeekSessions().filter(s=>s.userId===uid).length; }
 function getUserWeekTonnage(uid){ return getCurrentWeekSessions().filter(s=>s.userId===uid).reduce((a,s)=>a+(s.tonnage||0),0); }
 function getWeekNumber(){ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+3-(d.getDay()+6)%7); const w1=new Date(d.getFullYear(),0,4); return 1+Math.round(((d-w1)/86400000-3+(w1.getDay()+6)%7)/7); }
-function computeCurrentStreak(uid){
-  const days=[...new Set(state.sessions.filter(s=>s.userId===uid).map(s=>new Date(s.date).toDateString()))].map(d=>new Date(d)).sort((a,b)=>b-a);
-  if(!days.length) return 0;
-  let streak=0, cur=new Date(); cur.setHours(0,0,0,0);
-  for(const d of days){ const sd=new Date(d); sd.setHours(0,0,0,0); if(Math.round((cur-sd)/86400000)<=1){streak++;cur=sd;}else break; }
-  return streak;
-}
+function computeCurrentStreak(uid){ return computeCurrentStreakFromSessions(state.sessions, uid); }
 function renderWeekLabel(){
   const n=new Date(),s=getWeekStart(n),e=getWeekEnd(n);
   const fmt=d=>d.toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
@@ -783,7 +895,7 @@ function renderBadges(uid){
     strengthRatio:Object.keys(allLifts).length?Math.max(...Object.values(allLifts))/USERS[uid].weight:0,
     hasLegs:userSessions.some(s=>Object.keys(s.exercises||{}).some(id=>legIds.includes(id))),
   };
-  BADGES.forEach(b=>{ if(b.check(checkData,USERS[uid].weight)&&!earned.includes(b.id)){ state.badges[uid].push(b.id); saveState(); } });
+  BADGES.forEach(b=>{ if(b.check(checkData,USERS[uid].weight)&&!earned.includes(b.id)){ state.badges[uid].push(b.id); } });
   container.innerHTML=''; let n=0;
   BADGES.forEach(b=>{
     if(n>=8) return;
@@ -1103,7 +1215,7 @@ function updateSessionSummary(){
   document.getElementById('sumPoints').textContent=totalPoints;
 }
 
-function logSession(){
+async function logSession(){
   const exIds=Object.keys(sessionData);
   if(exIds.length===0){ showToast('🤨 Ни одного упражнения не записано, лентяй.'); return; }
   let totalPoints=0, totalTonnage=0, newPRs=[], loggedExercises={};
@@ -1115,33 +1227,40 @@ function logSession(){
     sets.forEach(s=>{ totalTonnage+=s.weight*s.reps; });
     totalPoints+=Math.round(ex.pts*sets.length*ex.difficulty*.5);
     const prevPR=(state.prs[currentUser]||{})[id]||0;
-    if(maxW>prevPR){
-      if(!state.prs[currentUser]) state.prs[currentUser]={};
-      state.prs[currentUser][id]=maxW;
-      newPRs.push({name:ex.name, weight:maxW, prev:prevPR});
-      state.totalPRs[currentUser]=(state.totalPRs[currentUser]||0)+1;
-    }
+    if(maxW>prevPR) newPRs.push({name:ex.name, weight:maxW, prev:prevPR});
   });
-  // streak
-  const today=new Date().toDateString();
-  if(state.lastTrainDate[currentUser]!==today){
-    const y=new Date(); y.setDate(y.getDate()-1);
-    state.streak[currentUser]=(state.lastTrainDate[currentUser]===y.toDateString())?(state.streak[currentUser]||0)+1:1;
-    if(state.streak[currentUser]>(state.longestStreak[currentUser]||0)) state.longestStreak[currentUser]=state.streak[currentUser];
-    state.lastTrainDate[currentUser]=today;
+
+  setSyncStatus('syncing','Сохранение...');
+  try {
+    const { data, error } = await sb.from('sessions').insert({
+      user_id: currentUser,
+      date: new Date().toISOString(),
+      exercises: loggedExercises,
+      points: totalPoints,
+      tonnage: totalTonnage,
+    }).select().single();
+    if(error) throw error;
+
+    // Add to local state immediately (real-time will also fire but we dedup by _dbId)
+    const sess = dbRowToSession(data);
+    state.sessions.push(sess);
+    state = rebuildDerived(state.sessions);
+    setSyncStatus('connected','Синхронизировано');
+
+    if(newPRs.length>0){
+      const pr=newPRs[0];
+      showPRFlash('🎯 НОВЫЙ РЕКОРД!', `${pr.name}: ${pr.weight}кг${pr.prev?` (+${pr.weight-pr.prev}кг)`:' (впервые!)'}`);
+      triggerConfetti();
+    }
+    showToast(`✅ Записано! +${totalPoints} очков · ${(totalTonnage/1000).toFixed(2)}т поднято`);
+    sessionData={};
+    refreshAll(); renderExercises(); updateSessionSummary();
+    switchTab('dashboard');
+  } catch(err) {
+    console.error('Save error:', err);
+    setSyncStatus('error','Ошибка сохранения');
+    showToast('❌ Ошибка сохранения. Проверь соединение.');
   }
-  state.sessions.push({ userId:currentUser, date:new Date().toISOString(), exercises:loggedExercises, points:totalPoints, tonnage:totalTonnage });
-  saveState();
-  if(newPRs.length>0){
-    const pr=newPRs[0];
-    showPRFlash('🎯 НОВЫЙ РЕКОРД!', `${pr.name}: ${pr.weight}кг${pr.prev?` (+${pr.weight-pr.prev}кг)`:' (впервые!)'}`);
-    triggerConfetti();
-  }
-  showToast(`✅ Записано! +${totalPoints} очков · ${(totalTonnage/1000).toFixed(2)}т поднято`);
-  sessionData={};
-  renderDashboard(); renderLeaderboard(); renderStats(); renderHOF(); renderHeatmap(); renderExcuse();
-  renderExercises(); updateSessionSummary();
-  switchTab('dashboard');
 }
 
 // ============================================================
@@ -1375,32 +1494,26 @@ function closeConfirm(){ document.getElementById('confirmOverlay').classList.rem
 // close on overlay click
 document.addEventListener('click',e=>{ if(e.target.id==='confirmOverlay') closeConfirm(); });
 
-function deleteSession(idx){
+async function deleteSession(idx){
   if(idx<0||idx>=state.sessions.length) return;
   const s=state.sessions[idx];
-  const uid=s.userId;
   const deletedDateStr=new Date(s.date).toDateString();
-  state.sessions.splice(idx,1);
-  // Recompute PRs for affected user from scratch
-  state.prs[uid]={};
-  state.sessions.filter(x=>x.userId===uid).forEach(x=>{
-    Object.entries(x.exercises||{}).forEach(([exId,sets])=>{
-      const setsArr=Array.isArray(sets)?sets:[sets];
-      const maxW=Math.max(...setsArr.map(s=>s.weight||0));
-      if(maxW>(state.prs[uid][exId]||0)) state.prs[uid][exId]=maxW;
-    });
-  });
-  state.streak[uid]=computeCurrentStreak(uid);
-  saveState();
-  showToast(`🗑 Тренировка удалена`);
-  renderHeatmap();
-  renderDashboard();
-  renderLeaderboard();
-  renderStats();
-  renderHOF();
-  renderExcuse();
-  // Re-open drawer for same day so user sees updated state
-  openDayDrawer(deletedDateStr);
+
+  setSyncStatus('syncing','Удаление...');
+  try {
+    const { error } = await sb.from('sessions').delete().eq('id', s._dbId);
+    if(error) throw error;
+    state.sessions.splice(idx,1);
+    state = rebuildDerived(state.sessions);
+    setSyncStatus('connected','Синхронизировано');
+    showToast('🗑 Тренировка удалена');
+    refreshAll();
+    openDayDrawer(deletedDateStr);
+  } catch(err) {
+    console.error('Delete error:', err);
+    setSyncStatus('error','Ошибка удаления');
+    showToast('❌ Ошибка удаления. Проверь соединение.');
+  }
 }
 
 
