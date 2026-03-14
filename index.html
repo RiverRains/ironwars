@@ -698,7 +698,13 @@ const BADGES=[
 // ============================================================
 const SUPABASE_URL = 'https://lsvupypqrltwufmezogk.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzdnVweXBxcmx0d3VmbWV6b2drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTcyMTAsImV4cCI6MjA4OTA3MzIxMH0.z2lCPTwU3Mr9j9Cdy6EWdBzpnnSL77atFjmpJlYxhVo';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let sb = null;
+try {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+} catch(e) {
+  console.error('Supabase init failed:', e);
+}
 
 // ============================================================
 // STATE
@@ -764,9 +770,17 @@ window.addEventListener('load', async ()=>{
   newInsult(); renderWeekLabel();
   renderCategoryFilters(); renderExercises();
 
+  // Check if Supabase loaded at all
+  if(!sb) {
+    setSyncStatus('error','Supabase не загружен');
+    showToast('❌ Ошибка: библиотека Supabase не загрузилась. Проверь интернет.');
+    renderExcuse(); renderDashboard(); renderHeatmap();
+    renderLeaderboard(); renderStats(); renderHOF();
+    return;
+  }
+
   setSyncStatus('syncing','Загрузка...');
 
-  // Load all sessions from Supabase
   try {
     const { data, error } = await sb.from('sessions').select('*').order('date', {ascending:true});
     if(error) throw error;
@@ -775,17 +789,19 @@ window.addEventListener('load', async ()=>{
     setSyncStatus('connected','Синхронизировано');
   } catch(err) {
     console.error('Supabase load error:', err);
-    setSyncStatus('error','Ошибка соединения');
+    setSyncStatus('error', err.message ? err.message.substring(0,40) : 'Ошибка соединения');
+    showToast('❌ Не удалось загрузить данные: ' + (err.message||'неизвестная ошибка'));
   }
 
   renderExcuse(); renderDashboard(); renderHeatmap();
   renderLeaderboard(); renderStats(); renderHOF();
 
+  if(!sb) return;
+
   // Subscribe to real-time changes
   sb.channel('sessions-changes')
     .on('postgres_changes', { event:'INSERT', schema:'public', table:'sessions' }, payload=>{
       const sess = dbRowToSession(payload.new);
-      // Avoid duplicate if we just inserted it ourselves
       if(!state.sessions.find(s=>s._dbId===sess._dbId)){
         state.sessions.push(sess);
         state = rebuildDerived(state.sessions);
@@ -1232,6 +1248,7 @@ async function logSession(){
 
   setSyncStatus('syncing','Сохранение...');
   try {
+    if(!sb) throw new Error('Supabase не инициализирован');
     const { data, error } = await sb.from('sessions').insert({
       user_id: currentUser,
       date: new Date().toISOString(),
@@ -1258,8 +1275,8 @@ async function logSession(){
     switchTab('dashboard');
   } catch(err) {
     console.error('Save error:', err);
-    setSyncStatus('error','Ошибка сохранения');
-    showToast('❌ Ошибка сохранения. Проверь соединение.');
+    setSyncStatus('error', err.message ? err.message.substring(0,40) : 'Ошибка');
+    showToast('❌ Ошибка: ' + (err.message||'не удалось сохранить'));
   }
 }
 
