@@ -28,6 +28,8 @@
   .sync-dot.syncing{background:var(--yellow);animation:pulse .8s infinite;}
   .sync-dot.error{background:var(--red);}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .edit-profile-btn{margin-left:auto;background:transparent;border:1px solid #333;color:var(--muted);width:28px;height:28px;border-radius:4px;cursor:pointer;font-size:.85rem;transition:all .2s;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .edit-profile-btn:hover{border-color:#666;color:var(--text);background:rgba(255,255,255,.05);}
   .insult-banner{background:linear-gradient(90deg,transparent,rgba(255,107,0,.15),transparent);border:1px solid rgba(255,107,0,.3);padding:10px 20px;border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-size:.9rem;color:var(--orange);max-width:420px;text-align:center;font-style:italic;cursor:pointer;transition:all .3s;}
   .insult-banner:hover{border-color:var(--orange);background:rgba(255,107,0,.2);}
   .nav-tabs{display:flex;gap:4px;padding:16px 0 0;border-bottom:1px solid #222;}
@@ -325,6 +327,34 @@
 <div class="pr-flash" id="prFlash"><span id="prFlashText">НОВЫЙ РЕКОРД!</span><small id="prFlashSub"></small></div>
 <div class="toast" id="toast"></div>
 <div class="hm-tooltip" id="hmTooltip"></div>
+
+<!-- EDIT PROFILE MODAL -->
+<div class="confirm-overlay" id="editProfileOverlay">
+  <div class="confirm-box" style="max-width:340px;">
+    <div class="confirm-title" id="editProfileTitle">✏️ ПАРАМЕТРЫ</div>
+    <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:24px;">
+      <div>
+        <div style="font-size:.75rem;color:var(--muted);letter-spacing:2px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;margin-bottom:6px;">Вес (кг)</div>
+        <input id="editWeight" type="number" min="30" max="300" style="width:100%;background:var(--dark);border:1px solid #444;color:var(--text);padding:10px 14px;border-radius:4px;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;text-align:center;">
+      </div>
+      <div>
+        <div style="font-size:.75rem;color:var(--muted);letter-spacing:2px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;margin-bottom:6px;">Рост (см)</div>
+        <input id="editHeight" type="number" min="100" max="250" style="width:100%;background:var(--dark);border:1px solid #444;color:var(--text);padding:10px 14px;border-radius:4px;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;text-align:center;">
+      </div>
+    </div>
+    <div class="confirm-btns">
+      <button class="confirm-yes" onclick="saveEditProfile()" style="background:var(--orange);">Сохранить</button>
+      <button class="confirm-no" onclick="closeEditProfile()">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- DRAFT RESTORE BANNER -->
+<div id="draftBanner" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--dark3);border:1px solid var(--yellow);border-left:4px solid var(--yellow);padding:12px 20px;border-radius:6px;z-index:8000;font-family:'Barlow Condensed',sans-serif;font-size:.9rem;display:flex;align-items:center;gap:12px;max-width:400px;box-shadow:0 8px 30px rgba(0,0,0,.5);">
+  <span>⚡ Найдена незавершённая тренировка. Восстановить?</span>
+  <button onclick="restoreDraft()" style="background:var(--yellow);border:none;color:#000;font-family:'Bebas Neue',sans-serif;padding:5px 12px;border-radius:3px;cursor:pointer;font-size:.85rem;letter-spacing:1px;white-space:nowrap;">ВОССТАНОВИТЬ</button>
+  <button onclick="discardDraft()" style="background:transparent;border:1px solid #555;color:var(--muted);font-family:'Barlow Condensed',sans-serif;padding:5px 10px;border-radius:3px;cursor:pointer;font-size:.85rem;white-space:nowrap;">Удалить</button>
+</div>
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
     <div class="confirm-title">⚠️ Удалить?</div>
@@ -370,7 +400,8 @@
       <div class="user-card user1">
         <div class="user-card-header">
           <div class="user-avatar">В</div>
-          <div class="user-info"><h3 id="u1name">ВЛАД</h3><div class="user-meta">114КГ · 188СМ</div></div>
+          <div class="user-info"><h3 id="u1name">ВЛАД</h3><div class="user-meta" id="u1meta">114КГ · 188СМ</div></div>
+          <button class="edit-profile-btn" onclick="openEditProfile(1)" title="Изменить параметры">✏️</button>
         </div>
         <div class="user-stats">
           <div class="stat-box"><div class="stat-val" id="u1pts">0</div><div class="stat-lbl">Очки</div></div>
@@ -387,7 +418,8 @@
       <div class="user-card user2">
         <div class="user-card-header">
           <div class="user-avatar" style="background:rgba(255,107,0,.15);border:2px solid var(--orange);color:var(--orange);">С</div>
-          <div class="user-info"><h3 id="u2name" style="color:var(--orange);">СТЕФАН</h3><div class="user-meta">65КГ · 170СМ</div></div>
+          <div class="user-info"><h3 id="u2name" style="color:var(--orange);">СТЕФАН</h3><div class="user-meta" id="u2meta">65КГ · 170СМ</div></div>
+          <button class="edit-profile-btn" onclick="openEditProfile(2)" title="Изменить параметры">✏️</button>
         </div>
         <div class="user-stats">
           <div class="stat-box"><div class="stat-val" id="u2pts" style="color:var(--orange);">0</div><div class="stat-lbl">Очки</div></div>
@@ -538,76 +570,207 @@
 // ============================================================
 // DATA
 // ============================================================
-const USERS = {
-  1: { name:'Влад',   weight:114, height:188, color:'#FFD600', initials:'В' },
-  2: { name:'Стефан', weight:65,  height:170, color:'#FF6B00', initials:'С' }
-};
+// Load user profiles from localStorage (so weight/height edits persist)
+function loadUserProfiles(){
+  try {
+    const saved = localStorage.getItem('ironwars_users');
+    if(saved) return JSON.parse(saved);
+  } catch(e){}
+  return {
+    1: { name:'Влад',   weight:114, height:188, color:'#FFD600', initials:'В' },
+    2: { name:'Стефан', weight:65,  height:170, color:'#FF6B00', initials:'С' }
+  };
+}
+function saveUserProfiles(){ localStorage.setItem('ironwars_users', JSON.stringify(USERS)); }
+const USERS = loadUserProfiles();
 
 const CATEGORIES = [
   { id:'chest', label:'💪 Грудь', exercises:[
-    { id:'bench',           name:'Жим штанги лёжа',             difficulty:3, pts:10 },
-    { id:'db_bench',        name:'Жим гантелей лёжа',           difficulty:3, pts:9  },
-    { id:'smith_bench',     name:'Жим в Смите лёжа',            difficulty:2, pts:7  },
-    { id:'machine_chest',   name:'Жим в тренажёре',             difficulty:1, pts:5  },
-    { id:'incline_db',      name:'Жим гантелей на наклоне',     difficulty:2, pts:7  },
-    { id:'incline_barbell', name:'Жим штанги на наклоне',       difficulty:3, pts:9  },
-    { id:'incline_machine', name:'Жим в тренажёре на наклоне',  difficulty:1, pts:5  },
-    { id:'cable_fly',       name:'Кроссовер на блоке',          difficulty:1, pts:4  },
-    { id:'cable_fly_low',   name:'Кроссовер снизу вверх',       difficulty:1, pts:4  },
+    { id:'bench',             name:'Жим штанги лёжа',                  difficulty:3, pts:10 },
+    { id:'db_bench',          name:'Жим гантелей лёжа',                difficulty:3, pts:9  },
+    { id:'smith_bench',       name:'Жим в Смите лёжа',                 difficulty:2, pts:7  },
+    { id:'machine_chest',     name:'Жим в тренажёре (горизонт.)',       difficulty:1, pts:5  },
+    { id:'incline_barbell',   name:'Жим штанги на наклонной',           difficulty:3, pts:9  },
+    { id:'incline_db',        name:'Жим гантелей на наклонной',         difficulty:2, pts:7  },
+    { id:'incline_smith',     name:'Жим в Смите на наклонной',          difficulty:2, pts:6  },
+    { id:'incline_machine',   name:'Жим в тренажёре на наклонной',      difficulty:1, pts:5  },
+    { id:'decline_barbell',   name:'Жим штанги на обратном наклоне',    difficulty:3, pts:8  },
+    { id:'decline_db',        name:'Жим гантелей на обратном наклоне',  difficulty:2, pts:6  },
+    { id:'cable_fly_mid',     name:'Кроссовер (средний угол)',           difficulty:1, pts:4  },
+    { id:'cable_fly_low',     name:'Кроссовер снизу вверх (нижний)',     difficulty:1, pts:4  },
+    { id:'cable_fly_high',    name:'Кроссовер сверху вниз (верхний)',    difficulty:1, pts:4  },
+    { id:'cable_chest_press', name:'Жим на блоке стоя',                 difficulty:2, pts:5  },
+    { id:'pec_deck',          name:'Сведение в тренажёре (Pec Deck)',    difficulty:1, pts:4  },
+    { id:'db_fly',            name:'Разводка с гантелями лёжа',          difficulty:1, pts:4  },
+    { id:'incline_db_fly',    name:'Разводка с гантелями на наклоне',    difficulty:1, pts:4  },
+    { id:'dips_chest',        name:'Отжимания на брусьях (грудь)',        difficulty:2, pts:7  },
+    { id:'svend_press',       name:'Жим Свенда (с блинами)',              difficulty:1, pts:3  },
   ]},
   { id:'back', label:'🔙 Спина', exercises:[
-    { id:'deadlift',        name:'Становая тяга',                difficulty:4, pts:15 },
-    { id:'barbell_row',     name:'Тяга штанги в наклоне',        difficulty:3, pts:9  },
-    { id:'tbar_row',        name:'Тяга Т-грифа',                 difficulty:3, pts:9  },
-    { id:'pullups',         name:'Подтягивания / с весом',        difficulty:3, pts:10 },
-    { id:'assisted_pullups',name:'Подтягивания в тренажёре',     difficulty:1, pts:4  },
-    { id:'lat_pulldown',    name:'Тяга верхнего блока (широкий)',difficulty:2, pts:7  },
-    { id:'lat_neutral',     name:'Тяга верхнего блока (нейтр.)',difficulty:2, pts:7  },
-    { id:'seated_cable_row',name:'Горизонтальная тяга блока',    difficulty:2, pts:7  },
-    { id:'chest_row',       name:'Тяга с упором на грудь',       difficulty:2, pts:7  },
-    { id:'machine_row',     name:'Тяга в тренажёре',             difficulty:1, pts:5  },
+    { id:'deadlift',          name:'Становая тяга',                      difficulty:4, pts:15 },
+    { id:'sumo_deadlift',     name:'Становая тяга сумо',                  difficulty:4, pts:13 },
+    { id:'barbell_row',       name:'Тяга штанги в наклоне',               difficulty:3, pts:9  },
+    { id:'tbar_row',          name:'Тяга Т-грифа',                        difficulty:3, pts:9  },
+    { id:'db_row',            name:'Тяга гантели в наклоне',              difficulty:2, pts:6  },
+    { id:'pullups',           name:'Подтягивания широким хватом',          difficulty:3, pts:10 },
+    { id:'pullups_close',     name:'Подтягивания узким хватом',            difficulty:3, pts:9  },
+    { id:'pullups_neutral',   name:'Подтягивания нейтральным хватом',      difficulty:3, pts:9  },
+    { id:'assisted_pullups',  name:'Подтягивания в тренажёре',             difficulty:1, pts:4  },
+    { id:'lat_pulldown',      name:'Тяга верхнего блока широкий хват',     difficulty:2, pts:7  },
+    { id:'lat_pulldown_close',name:'Тяга верхнего блока узкий хват',       difficulty:2, pts:7  },
+    { id:'lat_neutral',       name:'Тяга верхнего блока нейтральный хват', difficulty:2, pts:7  },
+    { id:'lat_underhand',     name:'Тяга верхнего блока обратный хват',    difficulty:2, pts:7  },
+    { id:'lat_single',        name:'Тяга верхнего блока одной рукой',      difficulty:2, pts:6  },
+    { id:'straight_arm_pd',   name:'Тяга блока прямыми руками',            difficulty:1, pts:5  },
+    { id:'seated_cable_row',  name:'Горизонтальная тяга блока',            difficulty:2, pts:7  },
+    { id:'cable_row_wide',    name:'Горизонтальная тяга широким хватом',   difficulty:2, pts:6  },
+    { id:'cable_row_single',  name:'Горизонтальная тяга одной рукой',      difficulty:2, pts:6  },
+    { id:'cable_row_high',    name:'Тяга блока к лицу (Face Pull)',         difficulty:1, pts:5  },
+    { id:'chest_row',         name:'Тяга с упором на грудь',               difficulty:2, pts:7  },
+    { id:'machine_row',       name:'Тяга в тренажёре',                     difficulty:1, pts:5  },
+    { id:'meadows_row',       name:'Тяга Медоуза',                         difficulty:2, pts:7  },
+    { id:'rack_pull',         name:'Тяга в раме (Rack Pull)',               difficulty:3, pts:10 },
+    { id:'good_mornings_back',name:'Доброе утро (спина)',                  difficulty:2, pts:6  },
+    { id:'shrug_barbell',     name:'Шраги со штангой',                     difficulty:1, pts:4  },
+    { id:'shrug_db',          name:'Шраги с гантелями',                    difficulty:1, pts:4  },
+    { id:'shrug_cable',       name:'Шраги на блоке',                       difficulty:1, pts:4  },
+    { id:'cable_pull_over',   name:'Пуловер на блоке',                     difficulty:1, pts:5  },
+    { id:'db_pullover',       name:'Пуловер с гантелью',                   difficulty:1, pts:5  },
+    { id:'hyperextension',    name:'Гиперэкстензия',                       difficulty:1, pts:4  },
   ]},
-  { id:'shoulders', label:'🏔 Плечи', exercises:[
-    { id:'ohp',              name:'Жим штанги стоя',             difficulty:3, pts:10 },
-    { id:'db_shoulder_press',name:'Жим гантелей над головой',    difficulty:2, pts:7  },
-    { id:'smith_ohp',        name:'Жим в Смите стоя',           difficulty:2, pts:6  },
-    { id:'machine_shoulder', name:'Жим в тренажёре для плеч',   difficulty:1, pts:5  },
-    { id:'arnold_press',     name:'Жим Арнольда',               difficulty:2, pts:7  },
-    { id:'lateral_raises',   name:'Разведение в стороны',        difficulty:1, pts:4  },
-    { id:'cable_lateral',    name:'Разведение на блоке',         difficulty:1, pts:4  },
-    { id:'machine_lateral',  name:'Разведение в тренажёре',      difficulty:1, pts:4  },
-    { id:'lean_db_lateral',  name:'Разведение в наклоне с гант.',difficulty:1, pts:4  },
+  { id:'shoulders_press', label:'🏔 Плечи — Жимы', exercises:[
+    { id:'ohp',               name:'Жим штанги стоя (над головой)',        difficulty:3, pts:10 },
+    { id:'ohp_seated',        name:'Жим штанги сидя',                      difficulty:3, pts:9  },
+    { id:'db_shoulder_press', name:'Жим гантелей над головой',             difficulty:2, pts:7  },
+    { id:'db_shoulder_seated',name:'Жим гантелей сидя',                    difficulty:2, pts:7  },
+    { id:'arnold_press',      name:'Жим Арнольда',                         difficulty:2, pts:7  },
+    { id:'smith_ohp',         name:'Жим в Смите стоя',                     difficulty:2, pts:6  },
+    { id:'machine_shoulder',  name:'Жим в тренажёре для плеч',             difficulty:1, pts:5  },
+    { id:'landmine_press',    name:'Жим в упоре (Landmine Press)',          difficulty:2, pts:6  },
+    { id:'push_press',        name:'Толчок штанги (Push Press)',            difficulty:3, pts:8  },
   ]},
-  { id:'legs', label:'🦵 Ноги', exercises:[
-    { id:'squat',            name:'Приседания со штангой',        difficulty:4, pts:14 },
-    { id:'hack_squat',       name:'Гакк-приседания',              difficulty:3, pts:10 },
-    { id:'smith_squat',      name:'Приседания в Смите',           difficulty:2, pts:7  },
-    { id:'front_squat',      name:'Приседания со штангой спереди',difficulty:4, pts:12 },
-    { id:'leg_press',        name:'Жим ногами',                   difficulty:2, pts:7  },
-    { id:'rdl',              name:'Румынская тяга',               difficulty:3, pts:9  },
-    { id:'stiff_leg_dl',     name:'Мёртвая тяга на прямых ногах',difficulty:3, pts:8  },
-    { id:'db_rdl',           name:'Румынская тяга с гантелями',   difficulty:2, pts:6  },
-    { id:'good_mornings',    name:'Доброе утро',                  difficulty:2, pts:6  },
-    { id:'ham_curl',         name:'Сгибание ног лёжа',            difficulty:1, pts:4  },
-    { id:'seated_leg_curl',  name:'Сгибание ног сидя',            difficulty:1, pts:4  },
-    { id:'nordic_curl',      name:'Нордийские сгибания',          difficulty:3, pts:8  },
-    { id:'ball_curl',        name:'Сгибание на фитболе',          difficulty:1, pts:3  },
-    { id:'standing_calf',    name:'Подъём на носки стоя',         difficulty:1, pts:3  },
-    { id:'smith_calf',       name:'Подъём на носки в Смите',      difficulty:1, pts:3  },
-    { id:'machine_calf',     name:'Подъём на носки в тренажёре',  difficulty:1, pts:3  },
-    { id:'seated_calf',      name:'Подъём на носки сидя',         difficulty:1, pts:3  },
-    { id:'leg_press_calf',   name:'Подъём на носки в жиме ногами',difficulty:1, pts:3  },
-    { id:'single_calf',      name:'Подъём на носки на одной ноге',difficulty:1, pts:3  },
+  { id:'shoulders_front', label:'🔆 Передний пучок', exercises:[
+    { id:'front_raise_db',    name:'Подъём гантелей перед собой',          difficulty:1, pts:4  },
+    { id:'front_raise_bar',   name:'Подъём штанги перед собой',            difficulty:1, pts:4  },
+    { id:'front_raise_cable', name:'Подъём на блоке перед собой',          difficulty:1, pts:4  },
+    { id:'front_raise_plate', name:'Подъём блина перед собой',             difficulty:1, pts:3  },
+    { id:'incline_front_raise',name:'Подъём гантелей на наклонной (перед)',difficulty:1, pts:4  },
+    { id:'cable_front_single',name:'Подъём на блоке одной рукой (перед)',  difficulty:1, pts:4  },
   ]},
-  { id:'arms', label:'💪 Руки', exercises:[
-    { id:'db_curl',           name:'Сгибания рук с гантелями',    difficulty:1, pts:4 },
-    { id:'ezbar_curl',        name:'Сгибания со штангой EZ',      difficulty:1, pts:4 },
-    { id:'cable_curl',        name:'Сгибания на блоке',           difficulty:1, pts:3 },
-    { id:'preacher_curl',     name:'Сгибания на скамье Скотта',   difficulty:1, pts:4 },
-    { id:'tricep_pushdown',   name:'Разгибания на блоке вниз',    difficulty:1, pts:4 },
-    { id:'overhead_cable_ext',name:'Разгибания на блоке за голову',difficulty:1,pts:4 },
-    { id:'skull_crushers',    name:'Французский жим',             difficulty:2, pts:6 },
-    { id:'dip_machine',       name:'Отжимания в тренажёре',       difficulty:1, pts:4 },
+  { id:'shoulders_mid', label:'↔️ Средний пучок', exercises:[
+    { id:'lateral_raises',    name:'Разведение гантелей в стороны',        difficulty:1, pts:4  },
+    { id:'cable_lateral',     name:'Разведение на блоке в стороны',        difficulty:1, pts:4  },
+    { id:'cable_lateral_low', name:'Разведение на нижнем блоке',           difficulty:1, pts:4  },
+    { id:'machine_lateral',   name:'Разведение в тренажёре (боковые)',     difficulty:1, pts:4  },
+    { id:'lean_db_lateral',   name:'Разведение в наклоне с гантелями',     difficulty:1, pts:4  },
+    { id:'upright_row',       name:'Тяга штанги к подбородку',             difficulty:2, pts:6  },
+    { id:'upright_row_cable', name:'Тяга блока к подбородку',              difficulty:1, pts:5  },
+    { id:'upright_row_db',    name:'Тяга гантелей к подбородку',           difficulty:1, pts:5  },
+    { id:'w_press',           name:'W-жим (боковые пучки)',                difficulty:1, pts:4  },
+  ]},
+  { id:'shoulders_rear', label:'🔄 Задний пучок', exercises:[
+    { id:'face_pull',         name:'Тяга к лицу на блоке (Face Pull)',     difficulty:1, pts:5  },
+    { id:'rear_delt_fly_db',  name:'Разведение гантелей в наклоне',        difficulty:1, pts:4  },
+    { id:'rear_delt_machine', name:'Разведение в тренажёре (задние)',      difficulty:1, pts:4  },
+    { id:'rear_delt_cable',   name:'Разведение на блоке задние пучки',     difficulty:1, pts:4  },
+    { id:'reverse_pec_deck',  name:'Обратный Pec Deck (задние дельты)',    difficulty:1, pts:4  },
+    { id:'prone_rear_raise',  name:'Подъём гантелей лёжа лицом вниз',     difficulty:1, pts:4  },
+    { id:'cable_rear_single', name:'Тяга блока задний пучок одной рукой',  difficulty:1, pts:4  },
+    { id:'band_pull_apart',   name:'Разведение с резиной',                  difficulty:1, pts:3  },
+  ]},
+  { id:'biceps', label:'💪 Бицепс', exercises:[
+    // Short head (короткая голова)
+    { id:'barbell_curl',      name:'Сгибания со штангой (длинная)',         difficulty:2, pts:6  },
+    { id:'incline_db_curl',   name:'Сгибания на наклоне (длинная голова)',  difficulty:1, pts:5  },
+    { id:'spider_curl',       name:'Паук-сгибание (длинная голова)',        difficulty:1, pts:5  },
+    { id:'cable_curl_high',   name:'Тяга блока на бицепс сверху (длинная)',difficulty:1, pts:5  },
+    // Short head (короткая голова)
+    { id:'db_curl',           name:'Сгибания с гантелями стоя',             difficulty:1, pts:4  },
+    { id:'concentration_curl',name:'Сгибания с упором (короткая голова)',   difficulty:1, pts:4  },
+    { id:'preacher_curl',     name:'Скамья Скотта (короткая голова)',        difficulty:1, pts:5  },
+    { id:'cable_curl_low',    name:'Сгибания на нижнем блоке',              difficulty:1, pts:4  },
+    { id:'machine_curl',      name:'Сгибания в тренажёре',                  difficulty:1, pts:4  },
+    // EZ bar
+    { id:'ezbar_curl',        name:'Сгибания с EZ-штангой',                 difficulty:1, pts:5  },
+    { id:'ezbar_preacher',    name:'Скамья Скотта с EZ-штангой',            difficulty:1, pts:5  },
+    { id:'reverse_curl',      name:'Обратные сгибания',                     difficulty:1, pts:4  },
+    // Brachialis (плечевая мышца)
+    { id:'hammer_curl',       name:'Молотковые сгибания (плечевая)',        difficulty:1, pts:4  },
+    { id:'cross_body_curl',   name:'Сгибания поперёк тела (плечевая)',      difficulty:1, pts:4  },
+    { id:'cable_hammer',      name:'Молотковые сгибания на блоке',          difficulty:1, pts:4  },
+    { id:'zottman_curl',      name:'Сгибания Зоттмана (плечевая+брахиал.)',difficulty:1, pts:4  },
+    { id:'neutral_cable_curl',name:'Нейтральные сгибания на блоке',        difficulty:1, pts:4  },
+  ]},
+  { id:'triceps', label:'💪 Трицепс', exercises:[
+    // Long head (длинная голова)
+    { id:'skull_crushers',    name:'Французский жим лёжа (длинная)',        difficulty:2, pts:6  },
+    { id:'overhead_db_ext',   name:'Разгибания с гантелью над головой',     difficulty:1, pts:5  },
+    { id:'overhead_cable_ext',name:'Разгибания на блоке за голову',         difficulty:1, pts:5  },
+    { id:'overhead_rope_ext', name:'Разгибания с верёвкой над головой',     difficulty:1, pts:5  },
+    { id:'incline_skull',     name:'Французский жим на наклоне',            difficulty:2, pts:6  },
+    // Lateral + medial heads
+    { id:'tricep_pushdown',   name:'Разгибания на блоке вниз (прямая)',     difficulty:1, pts:4  },
+    { id:'rope_pushdown',     name:'Разгибания на блоке с верёвкой',        difficulty:1, pts:4  },
+    { id:'reverse_pushdown',  name:'Разгибания обратным хватом на блоке',   difficulty:1, pts:4  },
+    { id:'single_pushdown',   name:'Разгибания на блоке одной рукой',       difficulty:1, pts:4  },
+    { id:'close_grip_bench',  name:'Жим узким хватом',                     difficulty:2, pts:7  },
+    { id:'dip_machine',       name:'Отжимания в тренажёре (дипы)',          difficulty:1, pts:5  },
+    { id:'dips_triceps',      name:'Отжимания на брусьях (трицепс)',        difficulty:2, pts:7  },
+    { id:'bench_dips',        name:'Отжимания от скамьи',                  difficulty:1, pts:4  },
+    { id:'kickback',          name:'Разгибания с гантелью в наклоне',       difficulty:1, pts:3  },
+    { id:'machine_tricep',    name:'Разгибания в тренажёре',                difficulty:1, pts:4  },
+  ]},
+  { id:'legs_quads', label:'🦵 Ноги — Квадрицепс', exercises:[
+    { id:'squat',             name:'Приседания со штангой',                 difficulty:4, pts:14 },
+    { id:'front_squat',       name:'Приседания со штангой спереди',         difficulty:4, pts:12 },
+    { id:'hack_squat',        name:'Гакк-приседания',                       difficulty:3, pts:10 },
+    { id:'smith_squat',       name:'Приседания в Смите',                    difficulty:2, pts:7  },
+    { id:'leg_press',         name:'Жим ногами',                            difficulty:2, pts:7  },
+    { id:'leg_press_narrow',  name:'Жим ногами узкой постановкой',          difficulty:2, pts:7  },
+    { id:'bulgarian_split',   name:'Болгарские сплит-приседания',           difficulty:3, pts:10 },
+    { id:'lunge_barbell',     name:'Выпады со штангой',                     difficulty:3, pts:8  },
+    { id:'lunge_db',          name:'Выпады с гантелями',                    difficulty:2, pts:6  },
+    { id:'leg_extension',     name:'Разгибания ног в тренажёре',            difficulty:1, pts:5  },
+    { id:'sissy_squat',       name:'Сисси-приседания',                      difficulty:2, pts:5  },
+    { id:'cable_squat',       name:'Приседания на блоке (Cable Squat)',      difficulty:2, pts:6  },
+    { id:'goblet_squat',      name:'Приседания с гантелью (Goblet)',         difficulty:1, pts:5  },
+    { id:'wall_sit',          name:'Приседания у стены',                    difficulty:1, pts:3  },
+  ]},
+  { id:'legs_hamstring', label:'🦵 Ноги — Задняя поверхность', exercises:[
+    { id:'rdl',               name:'Румынская тяга',                        difficulty:3, pts:9  },
+    { id:'stiff_leg_dl',      name:'Мёртвая тяга на прямых ногах',          difficulty:3, pts:8  },
+    { id:'db_rdl',            name:'Румынская тяга с гантелями',            difficulty:2, pts:6  },
+    { id:'single_leg_rdl',    name:'Румынская тяга на одной ноге',          difficulty:2, pts:7  },
+    { id:'good_mornings',     name:'Доброе утро',                           difficulty:2, pts:6  },
+    { id:'ham_curl',          name:'Сгибание ног лёжа (бицепс бедра)',      difficulty:1, pts:4  },
+    { id:'seated_leg_curl',   name:'Сгибание ног сидя',                     difficulty:1, pts:4  },
+    { id:'nordic_curl',       name:'Нордийские сгибания',                   difficulty:3, pts:8  },
+    { id:'cable_pull_through',name:'Тяга блока между ног (Pull Through)',    difficulty:1, pts:5  },
+    { id:'ball_curl',         name:'Сгибание ног на фитболе',               difficulty:1, pts:3  },
+    { id:'hip_thrust',        name:'Ягодичный мост со штангой',             difficulty:2, pts:7  },
+    { id:'glute_bridge',      name:'Ягодичный мост с весом',                difficulty:1, pts:5  },
+    { id:'cable_kickback',    name:'Отведение ноги на блоке',               difficulty:1, pts:4  },
+  ]},
+  { id:'legs_calf', label:'🦵 Ноги — Икры', exercises:[
+    { id:'standing_calf',     name:'Подъём на носки стоя',                  difficulty:1, pts:3  },
+    { id:'smith_calf',        name:'Подъём на носки в Смите',               difficulty:1, pts:3  },
+    { id:'machine_calf',      name:'Подъём на носки стоя в тренажёре',      difficulty:1, pts:3  },
+    { id:'seated_calf',       name:'Подъём на носки сидя',                  difficulty:1, pts:3  },
+    { id:'leg_press_calf',    name:'Подъём на носки в жиме ногами',         difficulty:1, pts:3  },
+    { id:'single_calf',       name:'Подъём на одной ноге',                  difficulty:1, pts:3  },
+    { id:'donkey_calf',       name:'Подъём на носки "Ослик"',               difficulty:1, pts:3  },
+    { id:'cable_calf',        name:'Подъём на носки с блоком',              difficulty:1, pts:3  },
+  ]},
+  { id:'core', label:'🔥 Пресс / Кор', exercises:[
+    { id:'cable_crunch',      name:'Скручивания на блоке',                  difficulty:1, pts:4  },
+    { id:'hanging_leg',       name:'Подъём ног в висе',                     difficulty:2, pts:6  },
+    { id:'plank',             name:'Планка (с весом)',                       difficulty:1, pts:3  },
+    { id:'ab_wheel',          name:'Ролик для пресса',                       difficulty:2, pts:5  },
+    { id:'cable_woodchop',    name:'Дровосек на блоке',                     difficulty:1, pts:4  },
+    { id:'russian_twist',     name:'Русские скручивания',                    difficulty:1, pts:3  },
+    { id:'decline_crunch',    name:'Скручивания на наклонной скамье',        difficulty:1, pts:3  },
+    { id:'leg_raise_bench',   name:'Подъём ног лёжа на скамье',             difficulty:1, pts:3  },
+    { id:'side_plank',        name:'Боковая планка с весом',                 difficulty:1, pts:3  },
   ]},
 ];
 
@@ -749,6 +912,75 @@ let currentUser = 1;
 let currentCategory = 'chest';
 let sessionData = {};
 
+// ============================================================
+// DRAFT AUTO-SAVE — saves in-progress session to localStorage
+// ============================================================
+function saveDraft(){
+  if(Object.keys(sessionData).length === 0){ localStorage.removeItem('ironwars_draft'); return; }
+  localStorage.setItem('ironwars_draft', JSON.stringify({ sessionData, currentUser, currentCategory, savedAt: Date.now() }));
+}
+function loadDraft(){
+  try {
+    const d = localStorage.getItem('ironwars_draft');
+    if(!d) return null;
+    const parsed = JSON.parse(d);
+    // Discard drafts older than 24 hours
+    if(Date.now() - parsed.savedAt > 86400000){ localStorage.removeItem('ironwars_draft'); return null; }
+    return parsed;
+  } catch(e){ return null; }
+}
+function discardDraft(){
+  localStorage.removeItem('ironwars_draft');
+  document.getElementById('draftBanner').style.display='none';
+}
+function restoreDraft(){
+  const draft = loadDraft();
+  if(!draft) return;
+  sessionData = draft.sessionData;
+  currentUser = draft.currentUser;
+  currentCategory = draft.currentCategory;
+  document.getElementById('draftBanner').style.display='none';
+  // Update UI to reflect restored state
+  document.getElementById('btnU1').className='user-btn'+(currentUser===1?' active-u1':'');
+  document.getElementById('btnU2').className='user-btn'+(currentUser===2?' active-u2':'');
+  renderCategoryFilters();
+  renderExercises();
+  updateSessionSummary();
+  switchTab('log');
+  showToast('✅ Тренировка восстановлена!');
+}
+
+// ============================================================
+// EDIT PROFILE
+// ============================================================
+let _editingUid = null;
+function openEditProfile(uid){
+  _editingUid = uid;
+  document.getElementById('editProfileTitle').textContent = `✏️ ${USERS[uid].name.toUpperCase()}`;
+  document.getElementById('editWeight').value = USERS[uid].weight;
+  document.getElementById('editHeight').value = USERS[uid].height;
+  document.getElementById('editProfileOverlay').classList.add('show');
+}
+function closeEditProfile(){ document.getElementById('editProfileOverlay').classList.remove('show'); _editingUid=null; }
+function saveEditProfile(){
+  if(!_editingUid) return;
+  const w = parseFloat(document.getElementById('editWeight').value);
+  const h = parseFloat(document.getElementById('editHeight').value);
+  if(!w||w<30||w>300||!h||h<100||h>250){ showToast('❌ Введи корректные данные'); return; }
+  USERS[_editingUid].weight = w;
+  USERS[_editingUid].height = h;
+  saveUserProfiles();
+  // Update meta display
+  document.getElementById(`u${_editingUid}meta`).textContent = `${w}КГ · ${h}СМ`;
+  closeEditProfile();
+  renderDashboard();
+  renderLeaderboard();
+  renderStats();
+  showToast(`✅ Параметры ${USERS[_editingUid].name} обновлены`);
+}
+
+
+
 function buildEmptyState(){
   return { sessions:[], prs:{1:{},2:{}}, streak:{1:0,2:0}, longestStreak:{1:0,2:0}, lastTrainDate:{1:null,2:null}, badges:{1:[],2:[]}, totalPRs:{1:0,2:0} };
 }
@@ -819,6 +1051,12 @@ window.addEventListener('load', async ()=>{
 
   renderExcuse(); renderDashboard(); renderHeatmap();
   renderLeaderboard(); renderStats(); renderHOF();
+
+  // Check for unfinished draft session
+  const draft = loadDraft();
+  if(draft && Object.keys(draft.sessionData).length > 0){
+    document.getElementById('draftBanner').style.display='flex';
+  }
 
   // Poll every 5 seconds for changes from the other user
   sb.startPolling(
@@ -1071,7 +1309,7 @@ function renderCategoryFilters(){
     </button>`).join('');
 }
 
-function selectCategory(id){ currentCategory=id; renderCategoryFilters(); renderExercises(); }
+function selectCategory(id){ currentCategory=id; renderCategoryFilters(); renderExercises(); saveDraft(); }
 
 function selectUser(uid){
   currentUser=uid;
@@ -1080,6 +1318,7 @@ function selectUser(uid){
   sessionData={};
   renderExercises();
   updateSessionSummary();
+  saveDraft();
 }
 
 function renderExercises(){
@@ -1181,6 +1420,7 @@ function nextSet(exId){
   wEl.placeholder=weight; rEl.placeholder=reps;
   wEl.focus();
   updateSessionSummary();
+  saveDraft();
 }
 
 function deleteSet(exId, idx){
@@ -1198,6 +1438,7 @@ function deleteSet(exId, idx){
   // update item style
   const item=document.getElementById(`item-${exId}`);
   if(sets.length===0){ item.classList.remove('done-ex'); document.getElementById(`chk-${exId}`).className='ex-checkbox'; document.getElementById(`chk-${exId}`).textContent=''; }
+  saveDraft();
 }
 
 function removeExercise(exId){
@@ -1215,6 +1456,7 @@ function removeExercise(exId){
   if(summaryDiv) summaryDiv.innerHTML=`<div class="ex-pr">${prs[exId]?`ПР: ${prs[exId]}кг`:'Нет ПР'}</div>`;
   updateSessionSummary();
   showToast(`🗑 ${ex?ex.name:'Упражнение'} удалено из тренировки`);
+  saveDraft();
 }
 
 function finishExercise(exId){
@@ -1288,6 +1530,7 @@ async function logSession(){
     }
     showToast(`✅ Записано! +${totalPoints} очков · ${(totalTonnage/1000).toFixed(2)}т поднято`);
     sessionData={};
+    localStorage.removeItem('ironwars_draft');
     refreshAll(); renderExercises(); updateSessionSummary();
     switchTab('dashboard');
   } catch(err) {
